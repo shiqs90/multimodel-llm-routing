@@ -26,18 +26,16 @@ so you reuse KV cache instead of recomputing it"*).
 
 ## Deploy
 ```bash
-# 1. 2nd GPU node (eks.tf: gpu desired_size=2)
-cd ../vllm-serving-eks/terraform && terraform apply
+# Prereq: an EKS GPU cluster with 2 GPU nodes + the NVIDIA GPU Operator (see the llm-serving-eks
+# project). If a standalone `vllm` Deployment/Service from that project is still running, delete it
+# first — its Service named `vllm` injects VLLM_PORT=tcp://... into every pod and crashes new engines:
+kubectl delete deployment vllm --ignore-not-found && kubectl delete service vllm --ignore-not-found
 
-# 2. Retire Project 1's standalone deployment — REQUIRED: its Service is named `vllm`, which
-#    injects VLLM_PORT=tcp://... into every pod in the namespace and crashes new engines.
-kubectl delete deployment vllm && kubectl delete service vllm
-
-# 3. Install the production-stack
+# 1. Install the production-stack with the 2-model values (run from this repo root)
 helm repo add vllm https://vllm-project.github.io/production-stack && helm repo update
-helm install vllm vllm/vllm-stack -f ../vllm-multimodel-routing/values.yaml
+helm install vllm vllm/vllm-stack -f values.yaml
 
-# 4. Verify (port-forwards the router, curls both models, shows routing logs)
+# 2. Verify (port-forwards the router, curls both models, shows routing logs)
 bash scripts/verify-routing.sh
 ```
 
